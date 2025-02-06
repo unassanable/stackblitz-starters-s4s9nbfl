@@ -8,60 +8,78 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+let port = 3000;
+
+app.listen(port, () => {
+  console.log(`Example app listening at http://localhost:${port}`);
+});
+
 mongoose
-  .connect("atlas url", {
+  .connect('atlas url', {
     useNewUrlParser: true,
-    useUnifiedTopology: true
+    useUnifiedTopology: true,
   })
   .then(() => console.log('Connected to MongoDB Atlas'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
-app.post('/menu', async (req, res) => {
+app.put('/menu/:id', async (req, res) => {
   try {
     const { name, description, price } = req.body;
-    if (!name || !price) {
+
+    if (name === '' || price === '') {
       return res.status(400).json({
         success: false,
-        message: 'Name and Price are required',
+        message: 'Name and Price cannot be empty',
       });
     }
 
-    const newMenuItem = await MenuItem.create({
-      name,
-      description,
-      price,
-    });
-    res.status(201).json({
-      success: true,
-      message: 'New menu item created successfully',
-      data: newMenuItem,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error creating menu item',
-      error: error.message,
-    });
-  }
-});
+    const updatedMenuItem = await MenuItem.findByIdAndUpdate(
+      req.params.id,
+      { name, description, price },
+      { new: true, runValidators: true }
+    );
 
-app.get('/menu', async (req, res) => {
-  try {
-    const menuItems = await MenuItem.find();
+    if (!updatedMenuItem) {
+      return res.status(404).json({
+        success: false,
+        message: 'Menu item not found',
+      });
+    }
+
     res.status(200).json({
       success: true,
-      data: menuItems,
+      message: 'Menu item updated successfully',
+      data: updatedMenuItem,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Error fetching menu items',
+      message: 'Error updating menu item',
       error: error.message,
     });
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.delete('/menu/:id', async (req, res) => {
+  try {
+    const deletedMenuItem = await MenuItem.findByIdAndDelete(req.params.id);
+
+    if (!deletedMenuItem) {
+      return res.status(404).json({
+        success: false,
+        message: 'Menu item not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Menu item deleted successfully',
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting menu item',
+      error: error.message,
+    });
+  }
 });
